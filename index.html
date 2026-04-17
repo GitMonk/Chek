@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Делим чек</title>
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Делим чек&quot;,&quot;short_name&quot;:&quot;Чек&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#faf9f6&quot;,&quot;theme_color&quot;:&quot;#1a1a1a&quot;}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --border: #e8e5de;
+    --border-strong: #c8c4bc;
+    --text: #1a1a1a;
+    --text-muted: #6b6860;
+    --text-faint: #a09d97;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0ea;
+    --accent-text: #1e3f2a;
+    --me-color: #1e5799;
+    --me-bg: #e8f0fb;
+    --me-border: #b8d0f0;
+    --her-color: #8b1a6b;
+    --her-bg: #fbe8f5;
+    --her-border: #e8b8dc;
+    --half-color: #5a4a1e;
+    --half-bg: #f5f0e0;
+    --half-border: #ddd0a0;
+    --font: 'Georgia', serif;
+    --font-ui: -apple-system, 'Helvetica Neue', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header h1 {
+    font-family: var(--font);
+    font-size: 20px;
+    font-weight: normal;
+    letter-spacing: -0.3px;
+  }
+
+  .step { display: none; }
+  .step.active { display: block; }
+
+  /* STEP 1 — setup names */
+  .setup-screen {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  .setup-screen .tagline {
+    font-family: var(--font);
+    font-size: 28px;
+    line-height: 1.3;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .setup-screen .sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 40px;
+    line-height: 1.5;
+  }
+
+  .name-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .name-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .name-field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-faint);
+  }
+
+  .name-field input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: var(--font-ui);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .name-field input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 15px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:active { opacity: 0.75; }
+
+  /* STEP 2 — load receipt */
+  .load-screen {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  .load-screen h2 {
+    font-family: var(--font);
+    font-size: 22px;
+    font-weight: normal;
+    margin-bottom: 6px;
+  }
+
+  .load-screen .sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 16px;
+    background: var(--surface);
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+
+  .upload-zone .icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .upload-zone p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .upload-zone strong {
+    color: var(--accent-text);
+    font-weight: 500;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: var(--text-faint);
+    font-size: 12px;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .btn-secondary {
+    width: 100%;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 10px;
+  }
+
+  .btn-secondary:hover { background: var(--bg); }
+
+  .status-msg {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 10px;
+    min-height: 36px;
+    line-height: 1.4;
+  }
+
+  .status-msg.error { color: #b33; }
+  .status-msg.loading { color: var(--accent); }
+
+  /* STEP 3 — split items */
+  .split-screen {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 0 20px;
+  }
+
+  .receipt-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+
+  .receipt-header .shop {
+    font-family: var(--font);
+    font-size: 18px;
+    font-weight: normal;
+    margin-bottom: 2px;
+  }
+
+  .receipt-header .meta {
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  .legend {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .dot-me { background: var(--me-color); }
+  .dot-her { background: var(--her-color); }
+  .dot-half { background: var(--half-color); }
+
+  .items-list {
+    padding: 8px 0;
+  }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    transition: background 0.1s;
+  }
+
+  .item-row.assigned-me { background: var(--me-bg); }
+  .item-row.assigned-her { background: var(--her-bg); }
+  .item-row.assigned-half { background: var(--half-bg); }
+
+  .item-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .item-name {
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+
+  .item-price {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .item-qty {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .toggle-group {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .toggle-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+
+  .toggle-btn + .toggle-btn {
+    border-left: 1px solid var(--border);
+  }
+
+  .toggle-btn.active-me {
+    background: var(--me-color);
+    color: #fff;
+  }
+
+  .toggle-btn.active-her {
+    background: var(--her-color);
+    color: #fff;
+  }
+
+  .toggle-btn.active-half {
+    background: var(--half-color);
+    color: #fff;
+  }
+
+  /* STEP 4 — result */
+  .result-screen {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  .result-title {
+    font-family: var(--font);
+    font-size: 24px;
+    font-weight: normal;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .result-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .result-card {
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+
+  .result-card.me-card {
+    background: var(--me-bg);
+    border: 1px solid var(--me-border);
+  }
+
+  .result-card.her-card {
+    background: var(--her-bg);
+    border: 1px solid var(--her-border);
+  }
+
+  .result-card .who {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  .me-card .who { color: var(--me-color); }
+  .her-card .who { color: var(--her-color); }
+
+  .result-card .amount {
+    font-family: var(--font);
+    font-size: 32px;
+    font-weight: normal;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .me-card .amount { color: var(--me-color); }
+  .her-card .amount { color: var(--her-color); }
+
+  .result-card .breakdown {
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.6;
+  }
+
+  .result-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .detail-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-section:last-child { border-bottom: none; }
+
+  .detail-section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+
+  .detail-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0;
+    color: var(--text-muted);
+  }
+
+  .detail-item span:last-child {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-outline {
+    flex: 1;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-outline:hover { background: var(--bg); }
+
+  /* sticky total bar */
+  .sticky-total {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+  }
+
+  .sticky-total.visible { display: flex; }
+
+  .sticky-totals {
+    display: flex;
+    gap: 20px;
+  }
+
+  .sticky-person {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sticky-person .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-faint);
+  }
+
+  .sticky-person .val {
+    font-family: var(--font);
+    font-size: 18px;
+  }
+
+  .sticky-person.is-me .val { color: var(--me-color); }
+  .sticky-person.is-her .val { color: var(--her-color); }
+
+  .btn-calc {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+  }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 0;
+    font-family: var(--font-ui);
+  }
+
+  .btn-back:hover { color: var(--text); }
+
+  /* canvas for QR decode (hidden) */
+  #qr-canvas { display: none; }
+
+  #file-input, #json-input { display: none; }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .unassigned-warning {
+    background: #fff8e8;
+    border: 1px solid #f0d060;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #7a5a10;
+    margin: 12px 20px;
+    display: none;
+  }
+
+  .unassigned-warning.visible { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Делим чек</h1>
+  <button class="btn-back" id="back-btn" style="display:none" onclick="goBack()">← назад</button>
+</header>
+
+<!-- STEP 1: Names -->
+<div class="step active" id="step-names">
+  <div class="setup-screen">
+    <p class="tagline">Кто делит<br>этот чек?</p>
+    <p class="sub">Введите имена — они будут использоваться в разметке позиций.</p>
+
+    <div class="name-row">
+      <div class="name-field">
+        <label>Первый (вы)</label>
+        <input type="text" id="name-me" placeholder="Например, Антон" maxlength="12">
+      </div>
+      <div class="name-field">
+        <label>Второй</label>
+        <input type="text" id="name-her" placeholder="Например, Маша" maxlength="12">
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="goToLoad()">Продолжить</button>
+  </div>
+</div>
+
+<!-- STEP 2: Load receipt -->
+<div class="step" id="step-load">
+  <div class="load-screen">
+    <h2>Загрузите чек</h2>
+    <p class="sub">Загрузите скриншот или фото с QR-кодом. Или загрузите JSON из приложения ФНС «Проверка чеков».</p>
+
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <span class="icon">▦</span>
+      <p><strong>Нажмите или перетащите</strong><br>картинку с QR-кодом<br><span style="font-size:12px;color:var(--text-faint)">PNG, JPG, WEBP, GIF</span></p>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*" onchange="handleImageUpload(this)">
+
+    <div class="divider">или</div>
+
+    <button class="btn-secondary" onclick="document.getElementById('json-input').click()">
+      Загрузить JSON из приложения ФНС
+    </button>
+    <input type="file" id="json-input" accept=".json,application/json" onchange="handleJsonUpload(this)">
+
+    <div class="divider">или</div>
+
+    <button class="btn-secondary" onclick="loadDemo()">
+      Загрузить демо-чек
+    </button>
+
+    <div class="status-msg" id="status-msg"></div>
+  </div>
+</div>
+
+<!-- STEP 3: Split items -->
+<div class="step" id="step-split">
+  <div class="split-screen">
+    <div class="receipt-header">
+      <div class="shop" id="receipt-shop">Магазин</div>
+      <div class="meta" id="receipt-meta"></div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="dot dot-me"></div><span id="legend-me">Я</span></div>
+      <div class="legend-item"><div class="dot dot-her"></div><span id="legend-her">Она</span></div>
+      <div class="legend-item"><div class="dot dot-half"></div><span>Пополам</span></div>
+    </div>
+
+    <div class="unassigned-warning" id="unassigned-warning">
+      Есть неразмеченные позиции — они считаются «пополам».
+    </div>
+
+    <div class="items-list" id="items-list"></div>
+  </div>
+
+  <div class="sticky-total visible" id="sticky-total">
+    <div class="sticky-totals">
+      <div class="sticky-person is-me">
+        <span class="label" id="sticky-label-me">Я</span>
+        <span class="val" id="sticky-me">0 ₽</span>
+      </div>
+      <div class="sticky-person is-her">
+        <span class="label" id="sticky-label-her">Она</span>
+        <span class="val" id="sticky-her">0 ₽</span>
+      </div>
+    </div>
+    <button class="btn-calc" onclick="goToResult()">Итог →</button>
+  </div>
+</div>
+
+<!-- STEP 4: Result -->
+<div class="step" id="step-result">
+  <div class="result-screen">
+    <div class="result-title">Итого</div>
+
+    <div class="result-cards">
+      <div class="result-card me-card">
+        <div class="who" id="result-label-me">Я</div>
+        <div class="amount" id="result-me">0 ₽</div>
+        <div class="breakdown" id="result-me-breakdown"></div>
+      </div>
+      <div class="result-card her-card">
+        <div class="who" id="result-label-her">Она</div>
+        <div class="amount" id="result-her">0 ₽</div>
+        <div class="breakdown" id="result-her-breakdown"></div>
+      </div>
+    </div>
+
+    <div class="result-detail" id="result-detail"></div>
+
+    <div class="action-row">
+      <button class="btn-outline" onclick="goToSplit()">← Изменить</button>
+      <button class="btn-primary" onclick="shareResult()" style="flex:1">Поделиться</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="qr-canvas"></canvas>
+
+<script>
+let nameMe = 'Я', nameHer = 'Она';
+let receiptData = null;
+let assignments = {};
+let currentStep = 'names';
+
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (type ? ' ' + type : '');
+}
+
+function setStatusHtml(html, type = '') {
+  const el = document.getElementById('status-msg');
+  el.innerHTML = html;
+  el.className = 'status-msg' + (type ? ' ' + type : '');
+}
+
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + id).classList.add('active');
+  currentStep = id;
+  document.getElementById('sticky-total').classList.toggle('visible', id === 'split');
+  document.getElementById('back-btn').style.display = (id !== 'names') ? '' : 'none';
+}
+
+function goBack() {
+  if (currentStep === 'load') showStep('names');
+  else if (currentStep === 'split') showStep('load');
+  else if (currentStep === 'result') showStep('split');
+}
+
+function goToLoad() {
+  const me = document.getElementById('name-me').value.trim();
+  const her = document.getElementById('name-her').value.trim();
+  if (!me || !her) { alert('Введите оба имени'); return; }
+  nameMe = me;
+  nameHer = her;
+  showStep('load');
+}
+
+function goToSplit() {
+  showStep('split');
+}
+
+function goToResult() {
+  buildResult();
+  showStep('result');
+}
+
+/* ---- QR IMAGE UPLOAD ---- */
+function handleImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  setStatusHtml('<span class="spinner"></span>Декодирую QR-код…', 'loading');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('qr-canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (!code) {
+        setStatus('QR-код не найден на изображении. Попробуйте другое фото.', 'error');
+        return;
+      }
+      setStatus('QR найден! Получаю данные чека…', 'loading');
+      fetchReceiptFromQR(code.data);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+/* drag & drop */
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const fakeInput = { files: [file] };
+    handleImageUpload(fakeInput);
+  }
+});
+
+/* ---- QR STRING → API ---- */
+function parseQRString(qr) {
+  const params = {};
+  qr.replace(/^https?:\/\/[^?]+\?/, '').split('&').forEach(p => {
+    const [k, v] = p.split('=');
+    if (k && v !== undefined) params[k] = decodeURIComponent(v);
+  });
+  if (!params.t && qr.includes('t=')) {
+    qr.split('&').forEach(p => {
+      const [k, v] = p.split('=');
+      if (k && v !== undefined) params[k] = v;
+    });
+  }
+  return params;
+}
+
+function fetchReceiptFromQR(qrData) {
+  const p = parseQRString(qrData);
+  if (!p.fn && !p.i && !p.fp) {
+    setStatus('Не удалось распознать данные чека из QR. Попробуйте загрузить JSON из приложения ФНС.', 'error');
+    return;
+  }
+
+  const url = `https://proverkacheka.com/check/get?token=&qrraw=${encodeURIComponent(qrData)}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.data && data.data.json) {
+        processReceiptJson(data.data.json);
+      } else {
+        setStatus('Чек получен, но данные не распознаны. Загрузите JSON из приложения ФНС.', 'error');
+      }
+    })
+    .catch(() => {
+      setStatus('Не удалось загрузить данные чека (нужен хостинг или API недоступен). Загрузите JSON из приложения ФНС.', 'error');
+    });
+}
+
+/* ---- JSON UPLOAD ---- */
+function handleJsonUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      processReceiptJson(data);
+    } catch {
+      setStatus('Не удалось прочитать файл. Убедитесь, что это JSON из приложения ФНС.', 'error');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+/* ---- PROCESS RECEIPT ---- */
+function processReceiptJson(json) {
+  const ticket = json.ticket || json;
+  const doc = ticket.document || ticket;
+  const receipt = doc.receipt || doc;
+
+  const items = receipt.items || receipt.products || receipt.rows || [];
+  if (!items.length) {
+    setStatus('Список товаров не найден в файле. Возможно, формат отличается.', 'error');
+    return;
+  }
+
+  receiptData = {
+    shop: receipt.user || receipt.retailPlace || receipt.userInn || 'Магазин',
+    date: receipt.dateTime || receipt.date || '',
+    total: (receipt.totalSum || receipt.total || 0) / 100,
+    items: items.map((it, i) => ({
+      id: i,
+      name: it.name || it.commodity || 'Товар',
+      price: (it.sum || it.price * (it.quantity || 1)) / 100,
+      qty: it.quantity || 1,
+      unitPrice: (it.price || 0) / 100,
+    }))
+  };
+
+  buildSplitScreen();
+  showStep('split');
+  setStatus('');
+}
+
+/* ---- DEMO ---- */
+function loadDemo() {
+  receiptData = {
+    shop: 'Самокат',
+    date: new Date().toISOString(),
+    total: 1847.50,
+    items: [
+      { id: 0, name: 'Молоко 3.2% 1л', price: 89.99, qty: 2, unitPrice: 89.99 },
+      { id: 1, name: 'Хлеб бородинский', price: 59.00, qty: 1, unitPrice: 59.00 },
+      { id: 2, name: 'Яйцо куриное С1 10шт', price: 119.90, qty: 1, unitPrice: 119.90 },
+      { id: 3, name: 'Шампунь для волос 250мл', price: 349.00, qty: 1, unitPrice: 349.00 },
+      { id: 4, name: 'Крем для рук увлажняющий', price: 199.00, qty: 1, unitPrice: 199.00 },
+      { id: 5, name: 'Макароны спагетти 500г', price: 74.90, qty: 2, unitPrice: 74.90 },
+      { id: 6, name: 'Соус томатный 350г', price: 89.00, qty: 1, unitPrice: 89.00 },
+      { id: 7, name: 'Пиво светлое 0.5л', price: 119.00, qty: 2, unitPrice: 119.00 },
+      { id: 8, name: 'Творог 5% 200г', price: 89.90, qty: 1, unitPrice: 89.90 },
+      { id: 9, name: 'Бананы 1кг', price: 99.90, qty: 1, unitPrice: 99.90 },
+    ]
+  };
+  buildSplitScreen();
+  showStep('split');
+}
+
+/* ---- BUILD SPLIT SCREEN ---- */
+function buildSplitScreen() {
+  assignments = {};
+  receiptData.items.forEach(it => assignments[it.id] = 'half');
+
+  document.getElementById('receipt-shop').textContent = receiptData.shop;
+  const d = receiptData.date ? new Date(receiptData.date) : null;
+  document.getElementById('receipt-meta').textContent = d && !isNaN(d)
+    ? d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+
+  document.getElementById('legend-me').textContent = nameMe;
+  document.getElementById('legend-her').textContent = nameHer;
+  document.getElementById('sticky-label-me').textContent = nameMe;
+  document.getElementById('sticky-label-her').textContent = nameHer;
+
+  renderItems();
+  updateTotals();
+}
+
+function renderItems() {
+  const list = document.getElementById('items-list');
+  list.innerHTML = receiptData.items.map(it => {
+    const asgn = assignments[it.id];
+    const rowClass = asgn === 'me' ? 'assigned-me' : asgn === 'her' ? 'assigned-her' : 'assigned-half';
+    const qtyStr = it.qty !== 1 ? `<span class="item-qty"> × ${it.qty}</span>` : '';
+    return `
+      <div class="item-row ${rowClass}" id="row-${it.id}">
+        <div class="item-info">
+          <div class="item-name">${escHtml(it.name)}${qtyStr}</div>
+          <div class="item-price">${fmt(it.price)} ₽</div>
+        </div>
+        <div class="toggle-group">
+          <button class="toggle-btn ${asgn === 'me' ? 'active-me' : ''}" onclick="assign(${it.id},'me')">${escHtml(nameMe)}</button>
+          <button class="toggle-btn ${asgn === 'half' ? 'active-half' : ''}" onclick="assign(${it.id},'half')">½</button>
+          <button class="toggle-btn ${asgn === 'her' ? 'active-her' : ''}" onclick="assign(${it.id},'her')">${escHtml(nameHer)}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function assign(id, who) {
+  assignments[id] = who;
+  const row = document.getElementById('row-' + id);
+  row.className = 'item-row ' + (who === 'me' ? 'assigned-me' : who === 'her' ? 'assigned-her' : 'assigned-half');
+  row.querySelectorAll('.toggle-btn').forEach((btn, i) => {
+    const roles = ['me', 'half', 'her'];
+    btn.className = 'toggle-btn' + (roles[i] === who ? ' active-' + roles[i] : '');
+  });
+  updateTotals();
+}
+
+function calcTotals() {
+  let me = 0, her = 0;
+  let meOwn = 0, herOwn = 0, sharedTotal = 0;
+  receiptData.items.forEach(it => {
+    const a = assignments[it.id];
+    if (a === 'me') { me += it.price; meOwn += it.price; }
+    else if (a === 'her') { her += it.price; herOwn += it.price; }
+    else { me += it.price / 2; her += it.price / 2; sharedTotal += it.price; }
+  });
+  return { me, her, meOwn, herOwn, sharedTotal };
+}
+
+function updateTotals() {
+  const { me, her } = calcTotals();
+  document.getElementById('sticky-me').textContent = fmt(me) + ' ₽';
+  document.getElementById('sticky-her').textContent = fmt(her) + ' ₽';
+}
+
+/* ---- BUILD RESULT ---- */
+function buildResult() {
+  const { me, her, meOwn, herOwn, sharedTotal } = calcTotals();
+
+  document.getElementById('result-label-me').textContent = nameMe;
+  document.getElementById('result-label-her').textContent = nameHer;
+  document.getElementById('result-me').textContent = fmt(me) + ' ₽';
+  document.getElementById('result-her').textContent = fmt(her) + ' ₽';
+
+  const mkBreakdown = (own, shared) => {
+    let parts = [];
+    if (own > 0) parts.push(`личных: ${fmt(own)} ₽`);
+    if (shared > 0) parts.push(`общих: ${fmt(shared / 2)} ₽`);
+    return parts.join('\n');
+  };
+
+  document.getElementById('result-me-breakdown').textContent = mkBreakdown(meOwn, sharedTotal);
+  document.getElementById('result-her-breakdown').textContent = mkBreakdown(herOwn, sharedTotal);
+
+  const meItems = receiptData.items.filter(it => assignments[it.id] === 'me');
+  const herItems = receiptData.items.filter(it => assignments[it.id] === 'her');
+  const halfItems = receiptData.items.filter(it => assignments[it.id] === 'half');
+
+  let html = '';
+
+  if (meItems.length) {
+    html += `<div class="detail-section">
+      <h3>Только ${escHtml(nameMe)}</h3>
+      ${meItems.map(it => `<div class="detail-item"><span>${escHtml(it.name)}</span><span>${fmt(it.price)} ₽</span></div>`).join('')}
+    </div>`;
+  }
+
+  if (herItems.length) {
+    html += `<div class="detail-section">
+      <h3>Только ${escHtml(nameHer)}</h3>
+      ${herItems.map(it => `<div class="detail-item"><span>${escHtml(it.name)}</span><span>${fmt(it.price)} ₽</span></div>`).join('')}
+    </div>`;
+  }
+
+  if (halfItems.length) {
+    html += `<div class="detail-section">
+      <h3>Пополам (${fmt(sharedTotal)} ₽ → по ${fmt(sharedTotal / 2)} ₽)</h3>
+      ${halfItems.map(it => `<div class="detail-item"><span>${escHtml(it.name)}</span><span>${fmt(it.price)} ₽</span></div>`).join('')}
+    </div>`;
+  }
+
+  document.getElementById('result-detail').innerHTML = html;
+}
+
+/* ---- SHARE ---- */
+function shareResult() {
+  const { me, her } = calcTotals();
+  const text = `Делим чек:\n${nameMe}: ${fmt(me)} ₽\n${nameHer}: ${fmt(her)} ₽`;
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('Скопировано в буфер!')).catch(() => alert(text));
+  }
+}
+
+/* ---- HELPERS ---- */
+function fmt(n) {
+  return Number(n).toFixed(2).replace('.', ',');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Enter on name fields */
+document.getElementById('name-her').addEventListener('keydown', e => {
+  if (e.key === 'Enter') goToLoad();
+});
+</script>
+</body>
+</html>
