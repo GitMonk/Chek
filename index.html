@@ -612,6 +612,11 @@
       </div>
     </div>
 
+    <div style="margin-bottom:24px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-faint);margin-bottom:6px">Токен proverkacheka.com <span style="font-size:11px;color:var(--text-faint);font-weight:normal;text-transform:none;letter-spacing:0">(необязательно)</span></div>
+      <input type="text" id="api-token" placeholder="Вставьте токен для работы QR" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);color:var(--text);outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      <div style="font-size:12px;color:var(--text-faint);margin-top:5px;line-height:1.4">Токен сохраняется на вашем устройстве и нигде не передаётся. Нужен для автоматического получения списка товаров по QR.</div>
+    </div>
     <button class="btn-primary" onclick="goToLoad()">Продолжить</button>
   </div>
 </div>
@@ -620,21 +625,55 @@
 <div class="step" id="step-load">
   <div class="load-screen">
     <h2>Загрузите чек</h2>
-    <p class="sub">Загрузите скриншот или фото с QR-кодом. Или загрузите JSON из приложения ФНС «Проверка чеков».</p>
+    <p class="sub">Получите список товаров через приложение ФНС — это занимает около минуты.</p>
 
-    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
-      <span class="icon">▦</span>
-      <p><strong>Нажмите или перетащите</strong><br>картинку с QR-кодом<br><span style="font-size:12px;color:var(--text-faint)">PNG, JPG, WEBP, GIF</span></p>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:500;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">Как получить JSON из приложения ФНС</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="min-width:20px;height:20px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:500;margin-top:1px">1</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.4">Откройте приложение <b>«Проверка чеков ФНС России»</b> на телефоне</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="min-width:20px;height:20px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:500;margin-top:1px">2</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.4">Найдите нужный чек в разделе <b>«Мои чеки»</b> или отсканируйте QR</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="min-width:20px;height:20px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:500;margin-top:1px">3</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.4">Откройте чек → нажмите <b>«Поделиться»</b> → выберите <b>«Сохранить как JSON»</b></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="min-width:20px;height:20px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:500;margin-top:1px">4</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.4">Вернитесь сюда и загрузите этот файл</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:12px 16px">
+        <button class="btn-primary" onclick="document.getElementById('json-input').click()" style="margin:0">
+          Загрузить JSON из приложения ФНС
+        </button>
+      </div>
     </div>
 
+    <input type="file" id="json-input" accept=".json,application/json" onchange="handleJsonUpload(this)">
     <input type="file" id="file-input" accept="image/*" onchange="handleImageUpload(this)">
 
-    <div class="divider">или</div>
+    <div class="divider">или попробуйте</div>
 
-    <button class="btn-secondary" onclick="document.getElementById('json-input').click()">
-      Загрузить JSON из приложения ФНС
+    <button class="btn-secondary" onclick="showQrSection()" id="qr-toggle-btn">
+      Загрузить картинку с QR-кодом ↓
     </button>
-    <input type="file" id="json-input" accept=".json,application/json" onchange="handleJsonUpload(this)">
+
+    <div id="qr-section" style="display:none;margin-top:10px">
+      <div style="background:#fff8e8;border:1px solid #f0d060;border-radius:8px;padding:10px 14px;font-size:12px;color:#7a5a10;margin-bottom:10px;line-height:1.5">
+        QR-код содержит только реквизиты чека (сумму, дату, ФН). Список товаров по нему получить не удаётся — сторонние API блокируют запросы из браузера. Если QR будет успешно считан, приложение покажет реквизиты и предложит открыть чек в приложении ФНС.
+      </div>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+        <span class="icon">▦</span>
+        <p><strong>Нажмите или перетащите</strong><br>картинку с QR-кодом<br><span style="font-size:12px;color:var(--text-faint)">PNG, JPG, WEBP, GIF</span></p>
+      </div>
+    </div>
 
     <div class="divider">или</div>
 
@@ -749,6 +788,8 @@ function goToLoad() {
   if (!me || !her) { alert('Введите оба имени'); return; }
   nameMe = me;
   nameHer = her;
+  const token = document.getElementById('api-token').value.trim();
+  if (token) localStorage.setItem('proverkacheka_token', token);
   showStep('load');
 }
 
@@ -791,6 +832,12 @@ function handleImageUpload(input) {
   input.value = '';
 }
 
+
+function showQrSection() {
+  document.getElementById('qr-section').style.display = 'block';
+  document.getElementById('qr-toggle-btn').style.display = 'none';
+}
+
 /* drag & drop */
 const zone = document.getElementById('upload-zone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
@@ -821,30 +868,66 @@ function parseQRString(qr) {
   return params;
 }
 
+function getToken() {
+  return localStorage.getItem('proverkacheka_token') || '';
+}
+
 function fetchReceiptFromQR(qrData) {
   const p = parseQRString(qrData);
   if (!p.fn && !p.i && !p.fp) {
-    setStatus('Не удалось распознать данные чека из QR. Попробуйте загрузить JSON из приложения ФНС.', 'error');
+    setStatus('QR найден, но это не чек ФНС. Попробуйте другое изображение.', 'error');
     return;
   }
 
-  const url = `https://proverkacheka.com/check/get?token=&qrraw=${encodeURIComponent(qrData)}`;
+  const token = getToken();
+  if (!token) {
+    showQrFallback(qrData, p);
+    return;
+  }
 
-  fetch(url)
+  setStatusHtml('<span class="spinner"></span>Запрашиваю список товаров…', 'loading');
+
+  const formData = new FormData();
+  formData.append('token', token);
+  formData.append('qrraw', qrData);
+
+  fetch('https://proverkacheka.com/api/v1/check/get', {
+    method: 'POST',
+    body: formData
+  })
     .then(r => r.json())
     .then(data => {
-      if (data && data.data && data.data.json) {
+      if (data && data.code === 1 && data.data && data.data.json) {
         processReceiptJson(data.data.json);
+      } else if (data && data.code === -3) {
+        setStatus('Токен не найден или недействителен. Проверьте токен в настройках.', 'error');
       } else {
-        setStatus('Чек получен, но данные не распознаны. Загрузите JSON из приложения ФНС.', 'error');
+        setStatus('Чек не найден в базе ФНС. Попробуйте позже или загрузите JSON вручную.', 'error');
       }
     })
     .catch(() => {
-      setStatus('Не удалось загрузить данные чека (нужен хостинг или API недоступен). Загрузите JSON из приложения ФНС.', 'error');
+      setStatus('Ошибка сети. Проверьте соединение.', 'error');
     });
 }
 
-/* ---- JSON UPLOAD ---- */
+function showQrFallback(qrData, p) {
+  const date = p.t ? p.t.replace('T', ' ') : '—';
+  const sum = p.s ? p.s + ' ₽' : '—';
+  const statusEl = document.getElementById('status-msg');
+  statusEl.className = 'status-msg';
+  statusEl.innerHTML = `
+    <div style="text-align:left;background:var(--accent-light);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:4px">
+      <div style="font-size:13px;font-weight:500;color:var(--accent-text);margin-bottom:6px">QR успешно считан ✓</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Дата: ${date} · Сумма: ${sum}</div>
+      <div style="font-size:12px;color:var(--text);margin-bottom:4px">Для автоматического получения товаров нужен токен proverkacheka.com</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Введите токен на первом экране (кнопка «← назад») — и QR будет работать полностью.</div>
+      <button class="btn-secondary" style="margin:0 0 8px;font-size:13px;padding:8px 12px" onclick="document.getElementById('json-input').click()">
+        Загрузить JSON из приложения ФНС
+      </button>
+    </div>`;
+}
+
+
 function handleJsonUpload(input) {
   const file = input.files[0];
   if (!file) return;
@@ -1054,6 +1137,11 @@ function escHtml(s) {
 }
 
 /* Enter on name fields */
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('proverkacheka_token');
+  if (saved) document.getElementById('api-token').value = saved;
+});
+
 document.getElementById('name-her').addEventListener('keydown', e => {
   if (e.key === 'Enter') goToLoad();
 });
