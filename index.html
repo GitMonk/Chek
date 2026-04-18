@@ -44,13 +44,19 @@
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-inner {
+    max-width: 520px;
+    margin: 0 auto;
     padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    width: 100%;
   }
 
   header h1 {
@@ -464,6 +470,10 @@
     font-size: 11px;
     color: var(--text-faint);
     line-height: 1.6;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 6px;
   }
 
   .result-detail {
@@ -530,11 +540,19 @@
     right: 0;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 12px 20px;
+    padding: 0;
     display: none;
+    justify-content: stretch;
+    z-index: 10;
+  }
+  .sticky-total-inner {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
     align-items: center;
     justify-content: space-between;
-    z-index: 10;
+    width: 100%;
   }
 
   .sticky-total.visible { display: flex; }
@@ -623,8 +641,10 @@
 <body>
 
 <header>
-  <h1>Делим чек</h1>
-  <button class="btn-back" id="back-btn" style="display:none" onclick="goBack()">← назад</button>
+  <div class="header-inner">
+    <h1>Делим чек</h1>
+    <button class="btn-back" id="back-btn" style="display:none" onclick="goBack()">← назад</button>
+  </div>
 </header>
 
 <!-- STEP 1: Names -->
@@ -650,7 +670,7 @@
       <div style="font-size:12px;color:var(--text-faint);margin-top:5px;line-height:1.4">Токен сохраняется на вашем устройстве и нигде не передаётся. Нужен для автоматического получения списка товаров по QR.</div>
     </div>
     <button class="btn-primary" onclick="goToLoad()">Продолжить</button>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text-faint);letter-spacing:0.3px">v1.2</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text-faint);letter-spacing:0.3px">v1.6</div>
   </div>
 </div>
 
@@ -735,17 +755,19 @@
   </div>
 
   <div class="sticky-total visible" id="sticky-total">
-    <div class="sticky-totals">
-      <div class="sticky-person is-me">
-        <span class="label" id="sticky-label-me">Я</span>
-        <span class="val" id="sticky-me">0 ₽</span>
+    <div class="sticky-total-inner">
+      <div class="sticky-totals">
+        <div class="sticky-person is-me">
+          <span class="label" id="sticky-label-me">Я</span>
+          <span class="val" id="sticky-me">0 ₽</span>
+        </div>
+        <div class="sticky-person is-her">
+          <span class="label" id="sticky-label-her">Она</span>
+          <span class="val" id="sticky-her">0 ₽</span>
+        </div>
       </div>
-      <div class="sticky-person is-her">
-        <span class="label" id="sticky-label-her">Она</span>
-        <span class="val" id="sticky-her">0 ₽</span>
-      </div>
+      <button class="btn-calc" onclick="goToResult()">Итог →</button>
     </div>
-    <button class="btn-calc" onclick="goToResult()">Итог →</button>
   </div>
 </div>
 
@@ -1113,13 +1135,13 @@ function buildResult() {
 
   const mkBreakdown = (own, shared) => {
     let parts = [];
-    if (own > 0) parts.push(`личных: ${fmt(own)} ₽`);
-    if (shared > 0) parts.push(`общих: ${fmt(shared / 2)} ₽`);
-    return parts.join('\n');
+    if (own > 0) parts.push(`<span style="white-space:nowrap">личных: ${fmt(own)} ₽</span>`);
+    if (shared > 0) parts.push(`<span style="white-space:nowrap">общих: ${fmt(shared / 2)} ₽</span>`);
+    return parts.join(' ');
   };
 
-  document.getElementById('result-me-breakdown').textContent = mkBreakdown(meOwn, sharedTotal);
-  document.getElementById('result-her-breakdown').textContent = mkBreakdown(herOwn, sharedTotal);
+  document.getElementById('result-me-breakdown').innerHTML = mkBreakdown(meOwn, sharedTotal);
+  document.getElementById('result-her-breakdown').innerHTML = mkBreakdown(herOwn, sharedTotal);
 
   const meItems = receiptData.items.filter(it => assignments[it.id] === 'me');
   const herItems = receiptData.items.filter(it => assignments[it.id] === 'her');
@@ -1175,7 +1197,24 @@ function copyAmount(amountId, flashId) {
 /* ---- SHARE ---- */
 function shareResult() {
   const { me, her } = calcTotals();
-  const text = `Делим чек:\n${nameMe}: ${fmt(me)} ₽\n${nameHer}: ${fmt(her)} ₽`;
+  const shop = receiptData ? receiptData.shop : '';
+  const dateStr = receiptData && receiptData.date ? (() => {
+    const d = new Date(receiptData.date);
+    if (isNaN(d)) return '';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = String(d.getFullYear()).slice(-2);
+    const time = d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+    return `${dd}.${mm}.${yy}, ${time}`;
+  })() : '';
+  const total = receiptData ? receiptData.items.reduce((s, it) => s + it.price, 0) : 0;
+  const totalStr = total > 0 ? fmt(total) + ' ₽' : '';
+  let meta = '';
+  if (shop || dateStr) {
+    const datepart = dateStr ? `(${dateStr})` : '';
+    meta = [shop, datepart].filter(Boolean).join(' ') + (totalStr ? ', ' + totalStr : '');
+  }
+  const text = `Делим чек:\n${meta ? meta + '\n' : ''}${nameMe}: ${fmt(me)} ₽\n${nameHer}: ${fmt(her)} ₽`;
   if (navigator.share) {
     navigator.share({ text }).catch(() => {});
   } else {
