@@ -91,6 +91,11 @@
     gap: 12px;
     margin-bottom: 32px;
   }
+  @media (max-width: 360px) {
+    .name-row {
+      grid-template-columns: 1fr;
+    }
+  }
 
   .name-field {
     display: flex;
@@ -393,9 +398,12 @@
 
   .result-card {
     border-radius: 12px;
-    padding: 20px 16px;
+    padding: 16px 12px;
     text-align: center;
+    cursor: pointer;
+    transition: opacity 0.15s;
   }
+  .result-card:active { opacity: 0.75; }
 
   .result-card.me-card {
     background: var(--me-bg);
@@ -419,15 +427,39 @@
 
   .result-card .amount {
     font-family: var(--font);
-    font-size: 32px;
+    font-size: 30px;
     font-weight: normal;
     line-height: 1;
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .me-card .amount { color: var(--me-color); }
   .her-card .amount { color: var(--her-color); }
 
+  .result-card .amount.copyable {
+    border-radius: 4px;
+    transition: background 0.15s;
+    display: inline-block;
+    padding: 2px 4px;
+    margin: -2px -4px;
+  }
+  .result-card:hover .amount.copyable {
+    background: rgba(0,0,0,0.06);
+  }
+  .copy-hint {
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 12px;
+    letter-spacing: 0.3px;
+  }
+  .copied-flash {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 12px;
+  }
   .result-card .breakdown {
     font-size: 11px;
     color: var(--text-faint);
@@ -618,6 +650,7 @@
       <div style="font-size:12px;color:var(--text-faint);margin-top:5px;line-height:1.4">Токен сохраняется на вашем устройстве и нигде не передаётся. Нужен для автоматического получения списка товаров по QR.</div>
     </div>
     <button class="btn-primary" onclick="goToLoad()">Продолжить</button>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text-faint);letter-spacing:0.3px">v1.2</div>
   </div>
 </div>
 
@@ -722,15 +755,17 @@
     <div class="result-title">Итого</div>
 
     <div class="result-cards">
-      <div class="result-card me-card">
+      <div class="result-card me-card" onclick="copyAmount('result-me', 'flash-me')">
         <div class="who" id="result-label-me">Я</div>
-        <div class="amount" id="result-me">0 ₽</div>
+        <div class="amount copyable" id="result-me">0 ₽</div>
         <div class="breakdown" id="result-me-breakdown"></div>
+        <div id="flash-me" class="copy-hint">нажмите, чтобы скопировать</div>
       </div>
-      <div class="result-card her-card">
+      <div class="result-card her-card" onclick="copyAmount('result-her', 'flash-her')">
         <div class="who" id="result-label-her">Она</div>
-        <div class="amount" id="result-her">0 ₽</div>
+        <div class="amount copyable" id="result-her">0 ₽</div>
         <div class="breakdown" id="result-her-breakdown"></div>
+        <div id="flash-her" class="copy-hint">нажмите, чтобы скопировать</div>
       </div>
     </div>
 
@@ -1114,6 +1149,27 @@ function buildResult() {
   }
 
   document.getElementById('result-detail').innerHTML = html;
+}
+
+/* ---- COPY AMOUNT ---- */
+function copyAmount(amountId, flashId) {
+  const text = document.getElementById(amountId).textContent.trim();
+  const flashEl = document.getElementById(flashId);
+  navigator.clipboard.writeText(text).then(() => {
+    flashEl.textContent = 'скопировано!';
+    flashEl.className = 'copied-flash';
+    setTimeout(() => {
+      flashEl.textContent = 'нажмите, чтобы скопировать';
+      flashEl.className = 'copy-hint';
+    }, 2000);
+  }).catch(() => {
+    flashEl.textContent = 'не удалось скопировать';
+    flashEl.className = 'copied-flash';
+    setTimeout(() => {
+      flashEl.textContent = 'нажмите, чтобы скопировать';
+      flashEl.className = 'copy-hint';
+    }, 2000);
+  });
 }
 
 /* ---- SHARE ---- */
